@@ -1,8 +1,8 @@
+use rand::seq::IteratorRandom;
+use rand::SeedableRng;
+use rand_pcg::Pcg64;
 use std::collections::HashSet;
 use std::fmt;
-use rand::seq::IteratorRandom;
-use rand_pcg::Pcg64;
-use rand::SeedableRng;
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct Size {
@@ -14,14 +14,17 @@ type Coord = (usize, usize);
 
 #[derive(Eq, PartialEq, Debug, Hash, Copy, Clone)]
 pub enum TileDirection {
-    NORTH, EAST, SOUTH, WEST
+    NORTH,
+    EAST,
+    SOUTH,
+    WEST,
 }
 
-pub const ALL_TILE_DIRECTIONS: [&'static TileDirection; 4] = [
+pub const ALL_TILE_DIRECTIONS: [&TileDirection; 4] = [
     &TileDirection::NORTH,
     &TileDirection::EAST,
     &TileDirection::SOUTH,
-    &TileDirection::WEST
+    &TileDirection::WEST,
 ];
 
 pub struct Cell {
@@ -31,18 +34,21 @@ pub struct Cell {
 
 impl Cell {
     pub fn new(coord: Coord) -> Self {
-        Self { coord: coord, walls: HashSet::new() }
+        Self {
+            coord,
+            walls: HashSet::new(),
+        }
     }
 
-    pub fn enable_wall(self: &mut Self, dir: &TileDirection) {
+    pub fn enable_wall(&mut self, dir: &TileDirection) {
         self.walls.insert(*dir);
     }
 
-    pub fn disable_wall(self: &mut Self, dir: &TileDirection) {
+    pub fn disable_wall(&mut self, dir: &TileDirection) {
         self.walls.remove(dir);
     }
 
-    pub fn is_wall_enabled(self: &Self, dir: &TileDirection) -> bool {
+    pub fn is_wall_enabled(&self, dir: &TileDirection) -> bool {
         self.walls.contains(dir)
     }
 }
@@ -84,15 +90,15 @@ impl Maze {
         Self { size: *size, cells }
     }
 
-    pub fn get_cell(self: &Self, coord: Coord) -> Option<&Cell> {
+    pub fn get_cell(&self, coord: Coord) -> Option<&Cell> {
         self.cells.get(coord.0)?.get(coord.1)
     }
 
-    pub fn get_mut_cell(self: &mut Self, coord: Coord) -> Option<&mut Cell> {
+    pub fn get_mut_cell(&mut self, coord: Coord) -> Option<&mut Cell> {
         self.cells.get_mut(coord.0)?.get_mut(coord.1)
     }
 
-    fn get_neighbor_coords_and_dirs(self: &Self, coord: Coord) -> Vec<(Coord, TileDirection)> {
+    fn get_neighbor_coords_and_dirs(&self, coord: Coord) -> Vec<(Coord, TileDirection)> {
         let mut all_neighbors = vec![
             ((coord.0 + 1, coord.1), TileDirection::EAST),
             ((coord.0, coord.1 + 1), TileDirection::SOUTH),
@@ -112,7 +118,7 @@ impl Maze {
             .collect()
     }
 
-    pub fn get_neighbor_cells_and_dir(self: &Self, coord: Coord) -> Vec<(&Cell, TileDirection)> {
+    pub fn get_neighbor_cells_and_dir(&self, coord: Coord) -> Vec<(&Cell, TileDirection)> {
         self.get_neighbor_coords_and_dirs(coord)
             .into_iter()
             .map(|(coord, dir)| (self.get_cell(coord).unwrap(), dir))
@@ -128,18 +134,23 @@ impl Maze {
         }
     }
 
-    fn get_mut_neighbor_cell_and_shared_wall(self: &mut Self, coord: Coord, direction: &TileDirection) -> Option<(&mut Cell, TileDirection)> {
-        let (coord, dir) = self.get_neighbor_coords_and_dirs(coord)
+    fn get_mut_neighbor_cell_and_shared_wall(
+        &mut self,
+        coord: Coord,
+        direction: &TileDirection,
+    ) -> Option<(&mut Cell, TileDirection)> {
+        let (coord, dir) = self
+            .get_neighbor_coords_and_dirs(coord)
             .into_iter()
             .find(|(_, dir)| dir == direction)?;
 
         match self.get_mut_cell(coord) {
             None => None,
-            Some(cell) => Some((cell, Maze::get_opposite(&dir)))
+            Some(cell) => Some((cell, Maze::get_opposite(&dir))),
         }
     }
 
-    fn is_edge_wall(self: &Self, coord: Coord, direction: &TileDirection) -> bool {
+    fn is_edge_wall(&self, coord: Coord, direction: &TileDirection) -> bool {
         match direction {
             TileDirection::NORTH => coord.1 == 0,
             TileDirection::EAST => coord.0 == self.size.width - 1,
@@ -148,7 +159,7 @@ impl Maze {
         }
     }
 
-    pub fn is_wall_enabled(self: &Self, coord: Coord, direction: &TileDirection) -> bool {
+    pub fn is_wall_enabled(&self, coord: Coord, direction: &TileDirection) -> bool {
         if self.is_edge_wall(coord, direction) {
             return true;
         }
@@ -156,29 +167,33 @@ impl Maze {
         self.get_cell(coord).unwrap().is_wall_enabled(direction)
     }
 
-    pub fn enable_wall(self: &mut Self, coord: Coord, direction: &TileDirection) {
+    pub fn enable_wall(&mut self, coord: Coord, direction: &TileDirection) {
         if self.is_edge_wall(coord, direction) {
             return;
         }
 
         self.get_mut_cell(coord).unwrap().enable_wall(direction);
 
-        let (neighbor_cell, shared_wall_dir) = self.get_mut_neighbor_cell_and_shared_wall(coord, direction).unwrap();
+        let (neighbor_cell, shared_wall_dir) = self
+            .get_mut_neighbor_cell_and_shared_wall(coord, direction)
+            .unwrap();
         neighbor_cell.enable_wall(&shared_wall_dir);
     }
 
-    pub fn disable_wall(self: &mut Self, coord: Coord, direction: &TileDirection) {
+    pub fn disable_wall(&mut self, coord: Coord, direction: &TileDirection) {
         if self.is_edge_wall(coord, direction) {
             return;
         }
 
         self.get_mut_cell(coord).unwrap().disable_wall(direction);
 
-        let (neighbor_cell, shared_wall_dir) = self.get_mut_neighbor_cell_and_shared_wall(coord, direction).unwrap();
+        let (neighbor_cell, shared_wall_dir) = self
+            .get_mut_neighbor_cell_and_shared_wall(coord, direction)
+            .unwrap();
         neighbor_cell.disable_wall(&shared_wall_dir);
     }
 
-    pub fn enable_all_walls(self: &mut Self) {
+    pub fn enable_all_walls(&mut self) {
         for i in 0..self.size.width {
             for j in 0..self.size.height {
                 for dir in ALL_TILE_DIRECTIONS.iter() {
@@ -191,7 +206,7 @@ impl Maze {
         }
     }
 
-    pub fn disable_all_walls(self: &mut Self) {
+    pub fn disable_all_walls(&mut self) {
         for i in 0..self.size.width {
             for j in 0..self.size.height {
                 for dir in ALL_TILE_DIRECTIONS.iter() {
@@ -204,7 +219,7 @@ impl Maze {
         }
     }
 
-    pub fn is_valid_coord(self: &Self, coord: &Coord) -> bool {
+    pub fn is_valid_coord(&self, coord: &Coord) -> bool {
         // unsigned so no need to check if greater than zero
         coord.0 < self.size.width && coord.1 < self.size.height
     }
@@ -218,7 +233,7 @@ impl fmt::Display for Maze {
             .collect::<String>();
 
         writeln!(f, " {}", first_line)?;
-        
+
         for j in 0..self.size.height {
             let mut first_line = String::new();
             let mut second_line = String::new();
@@ -258,7 +273,6 @@ pub struct MazeGen {
 }
 
 impl MazeGen {
-
     pub fn new(size: &Size) -> Self {
         let mut left_to_visit = HashSet::new();
         for i in 0..size.width {
@@ -266,8 +280,8 @@ impl MazeGen {
                 left_to_visit.insert((i, j));
             }
         }
-        
-        Self { 
+
+        Self {
             maze: Maze::new(size),
             left_to_visit,
             path_stack: Vec::new(),
@@ -275,7 +289,8 @@ impl MazeGen {
     }
 
     fn get_valid_neighbor_coords_and_dirs(&self, coord: Coord) -> Vec<(Coord, TileDirection)> {
-        self.maze.get_neighbor_coords_and_dirs(coord)
+        self.maze
+            .get_neighbor_coords_and_dirs(coord)
             .into_iter()
             .filter(|(coord, _)| self.left_to_visit.contains(coord))
             .collect()
@@ -292,11 +307,16 @@ impl MazeGen {
         let mut coord: Coord = (0, 0);
         self.left_to_visit.remove(&coord);
 
-        while self.path_stack.len() > 0 || !self.left_to_visit.is_empty() {
-
+        while !self.path_stack.is_empty() || !self.left_to_visit.is_empty() {
             // one algo step: choose a direction or backtrack
-            match self.get_valid_neighbor_coords_and_dirs(coord).into_iter().choose(&mut rng) {
-                None => { coord = self.path_stack.pop().unwrap(); },
+            match self
+                .get_valid_neighbor_coords_and_dirs(coord)
+                .into_iter()
+                .choose(&mut rng)
+            {
+                None => {
+                    coord = self.path_stack.pop().unwrap();
+                }
                 Some((next_coord, dir)) => {
                     // remove wall between current and next cell
                     self.maze.disable_wall(coord, &dir);
@@ -304,12 +324,11 @@ impl MazeGen {
                     self.path_stack.push(coord);
                     coord = next_coord;
                     self.left_to_visit.remove(&coord);
-                },
+                }
             }
         }
     }
 }
-
 
 pub fn gen_maze(size: &Size) -> Maze {
 

@@ -1,9 +1,9 @@
 use glutin_window::GlutinWindow as Window;
+use mazegen::{Maze, Size, TileDirection, ALL_TILE_DIRECTIONS};
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
-use mazegen::{Size, Maze, TileDirection, ALL_TILE_DIRECTIONS};
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
@@ -15,7 +15,6 @@ const CELL_MARGIN: f64 = 2.0;
 const CELL_FULL_SIZE: f64 = (WALL_THICKNESS + CELL_MARGIN) * 2.0 + CELL_SIZE;
 
 impl App {
-
     fn render(&mut self, args: &RenderArgs, maze: &Maze) {
         use graphics::*;
 
@@ -31,20 +30,29 @@ impl App {
 
             for i in 0..maze.size.width {
                 for j in 0..maze.size.height {
-
                     for direction in ALL_TILE_DIRECTIONS.iter() {
                         if maze.is_wall_enabled((i, j), direction) {
                             let (trans_x, trans_y, wall) = match direction {
-                                TileDirection::NORTH => (CELL_MARGIN + WALL_THICKNESS, CELL_MARGIN, &horizontal_wall),
-                                TileDirection::WEST => (CELL_MARGIN, CELL_MARGIN + WALL_THICKNESS, &vertical_wall),
-                                TileDirection::SOUTH => (CELL_MARGIN + WALL_THICKNESS, CELL_MARGIN + WALL_THICKNESS * 2.0 + CELL_SIZE, &horizontal_wall),
-                                TileDirection::EAST => (CELL_MARGIN + WALL_THICKNESS + CELL_SIZE, CELL_MARGIN + WALL_THICKNESS, &vertical_wall),
+                                TileDirection::NORTH => {
+                                    (CELL_MARGIN + WALL_THICKNESS, CELL_MARGIN, &horizontal_wall)
+                                }
+                                TileDirection::WEST => {
+                                    (CELL_MARGIN, CELL_MARGIN + WALL_THICKNESS, &vertical_wall)
+                                }
+                                TileDirection::SOUTH => (
+                                    CELL_MARGIN + WALL_THICKNESS,
+                                    CELL_MARGIN + WALL_THICKNESS * 2.0 + CELL_SIZE,
+                                    &horizontal_wall,
+                                ),
+                                TileDirection::EAST => (
+                                    CELL_MARGIN + WALL_THICKNESS + CELL_SIZE,
+                                    CELL_MARGIN + WALL_THICKNESS,
+                                    &vertical_wall,
+                                ),
                             };
 
                             let (x, y) = (CELL_FULL_SIZE * (i as f64), CELL_FULL_SIZE * (j as f64));
-                            let transform = c.transform
-                                .trans(x, y)
-                                .trans(trans_x, trans_y);
+                            let transform = c.transform.trans(x, y).trans(trans_x, trans_y);
 
                             rectangle(RED, *wall, transform, gl);
                         }
@@ -60,7 +68,10 @@ impl App {
 }
 
 fn main() {
-    let maze = mazegen::gen_maze(&Size { width: 20, height: 20 });
+    let maze = mazegen::gen_maze(&Size {
+        width: 20,
+        height: 20,
+    });
 
     // Change this to OpenGL::V2_1 if not working.
     let opengl = OpenGL::V3_2;
@@ -93,4 +104,3 @@ fn main() {
         }
     }
 }
-
